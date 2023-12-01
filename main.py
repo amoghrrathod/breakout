@@ -136,9 +136,7 @@ def play():
                     pygame.draw.rect(screen, block_col, block[0])
                     pygame.draw.rect(screen, block_outline, (block[0]), 2)
                     pygame.draw.rect(screen, bg, (block[0]), 1)
-
-
-    # paddle class
+    # paddle class    class paddle():
     class paddle():
         def __init__(self):
             self.reset()
@@ -259,7 +257,17 @@ def play():
             self.speed_y = -4
             self.speed_max = 5
             self.game_over = 0
-
+    #create a class for powerups
+    class powerups:
+        def __init__(self):
+            self.reset()
+        def ball_5(self, x, y):
+            game_ball.move(player_paddle.x, player_paddle.y)
+            game_ball.move(player_paddle.x, player_paddle.y)
+            game_ball.move(player_paddle.x, player_paddle.y)
+            game_ball.move(player_paddle.x, player_paddle.y)
+        
+        
     # create a wall
     wall = wall()
     wall.create_wall()

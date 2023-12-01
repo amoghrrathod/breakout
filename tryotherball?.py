@@ -102,7 +102,7 @@ class Ball(pygame.sprite.Sprite):
     def __init__(self, xy):
         pygame.sprite.Sprite.__init__(self)
         # set the image and rect for rendering
-        self.image = pygame.image.load(os.path.join('images','ball.gif'))
+        self.image = pygame.image.load(os.path.join('assets','ball.png'))
         self.rect = self.image.get_rect()
         self.rect.centerx, self.rect.centery = xy
 
@@ -410,7 +410,7 @@ def loadLevel(self):
                 elif blocklevel == 6:
                     # create solid block and add it
                     self.blocks.add(self.blockfactory.getSolidBlock((x,y)))
-class Game(object):
+class Game(pygame.sprite.Sprite):
     """Our game object! This is a fairly simple object that handles the
     initialization of pygame and sets up our game to run."""
 
@@ -574,7 +574,7 @@ class Lives(pygame.sprite.Sprite):
     def __init__(self, xy, startinglives=3):
         pygame.sprite.Sprite.__init__(self)
         self.xy = xy        # our rendering position
-        self.ballimage = pygame.image.load(os.path.join('images','ball.gif'))  # path to the ball image
+        self.ballimage = pygame.image.load(os.path.join('assets','ball.png'))  # path to the ball image
         self.setLives(startinglives)        # sets lives and generates the lives image
 
     def getLives(self):
@@ -607,21 +607,21 @@ class Lives(pygame.sprite.Sprite):
 
         # move rect to the proper location
         self.rect.left, self.rect.centery = self.xy
-  # load the first level
-    self.currentlevel = 1
-    self.loadLevel(self.currentlevel)
+    # load the first level
+        self.currentlevel = 1
+        self.loadLevel(self.currentlevel)
 
-    # track the state of the game
-    self.isReset = True
-    self.playing = True
+        # track the state of the game
+        self.isReset = True
+        self.playing = True
 
-    # create our score object
-    self.score = Score((75, 575))
-    self.sprites.add(self.score)
+        # create our score object
+        self.score = Score((75, 575))
+        self.sprites.add(self.score)
 
-    # create our lives object
-    self.lives = Lives((450, 575), 3)
-    self.sprites.add(self.lives)
+        # create our lives object
+        self.lives = Lives((450, 575), 3)
+        self.sprites.add(self.lives)
 
 if __name__ == '__main__':
     game = Game()
