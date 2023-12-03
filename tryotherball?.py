@@ -441,7 +441,7 @@ class Game(pygame.sprite.Sprite):
         # manageCollisions
         self.manageCollisions()
         # set the window title
-        pygame.display.set_caption("Pygame Tutorial 4 - Breakout")
+        pygame.display.set_caption("Breakout")
 
         # tell pygame to only pay attention to certain events
         # we want to know if the user hits the X on the window, and we
