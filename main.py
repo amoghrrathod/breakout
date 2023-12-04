@@ -35,6 +35,9 @@ label1.place(x = 0, y = 0)
 label2 = Label( root, text = "Welcome") 
 label2.pack(pady = 50) 
 # all the calls
+class result:
+    def __init__(self):
+        
 def button_exit():
     with open('settings.txt','w') as setfile:
         json.dump(data,setfile)
