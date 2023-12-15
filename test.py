@@ -50,15 +50,7 @@ def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 #bigball power up
-def ball_5():
-    player_paddle=paddle()
-    t=13
-    for i in range(4):
-        t+=13
-        ball5=game_ball(t+player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
-        ball5.draw()
-        ball5.move()
-# brick wall class
+
 class wall():
     def __init__(self):
         self.width = scrw // cols
@@ -83,7 +75,7 @@ class wall():
                 #give strenth randomly to the blocks 
                 strength = random.randint(1,3)
                 # create a list at this point to store the rect and colour data
-                block_individual = [rect, strength, ball_5()]
+                block_individual = [rect, strength]
                 # append that individual block to the block row
                 block_row.append(block_individual)
             # append the row to the full list of blocks
@@ -173,8 +165,6 @@ class game_ball():
                         wall.blocks[row_count][item_count][1] -= 1
                     else:
                         wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
-                    if wall.blocks[row_count][item_count][2]==ball_5():
-                        ball_5()     
                 # check if block still exists, in whcih case the wall is not destroyed
                 if wall.blocks[row_count][item_count][0] != (0, 0, 0, 0):
                     wall_destroyed = 0
@@ -183,8 +173,7 @@ class game_ball():
             # increase row counter
             row_count += 1
         #power up
-        if wall.blocks[row_count][item_count][2]==ball_5():
-                ball_5() 
+        pass
         # after iterating through all the blocks, check if the wall is destroyed
         if wall_destroyed == 1:
             self.game_over = 1
