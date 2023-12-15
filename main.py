@@ -1,4 +1,5 @@
-import tkinter as tk,sys,json
+import tkinter as tk,sys,json,random
+from random import Random
 import customtkinter as Ctk
 from tkinter import *
 from customtkinter import *
@@ -36,12 +37,10 @@ label2 = Label( root, text = "Welcome")
 label2.pack(pady = 50) 
 # all the calls
 class result:
-    def __init__(self):
-        
-def button_exit():
-    with open('settings.txt','w') as setfile:
-        json.dump(data,setfile)
-    sys.exit(0)
+    def button_exit():
+        with open('settings.txt','w') as setfile:
+            json.dump(data,setfile)
+        sys.exit(0)
 
 def play():
     data={"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": 90}  
@@ -55,7 +54,6 @@ def play():
     screen_height = scrh
     screen = pygame.display.set_mode((screen_width,screen_height))
     pygame.display.set_caption('Brick-slayer')
-
     # define font
     font = pygame.font.SysFont('typewriter', 70)
     #background image
@@ -110,11 +108,11 @@ def play():
                     block_y = row * self.height
                     rect = pygame.Rect(block_x, block_y, self.width, self.height)
                     # assign block strength based on row
-                    if row < 2:
+                    if row < random.randint(1,3):
                         strength = 3
-                    elif row < 4:
+                    elif row < random.randint(1,3):
                         strength = 2
-                    elif row < 6:
+                    elif row < random.randint(1,3):
                         strength = 1
                     # create a list at this point to store the rect and colour data
                     block_individual = [rect, strength]
@@ -127,18 +125,12 @@ def play():
             for row in self.blocks:
                 for block in row:
                     # assign a colour based on block strength
-                    if block[1] == 3:
-                        block_col = bg
-                        block_outline = block_gold_outline
-                    elif block[1] == 2:
-                        block_col = bg
-                        block_outline = block_magenta_outline
-                    elif block[1] == 1:
-                        block_col = bg
-                        block_outline = block_teal_outline
-                    pygame.draw.rect(screen, block_col, block[0])
-                    pygame.draw.rect(screen, block_outline, (block[0]), 2)
+                    while block[0]==random.randint(1,3):
+                        block_col = random.choice([block_gold_outline,block_magenta_outline,block_teal_outline])
+                    pygame.draw.rect(screen, block_col, (block[0]),1,1)
+                    pygame.draw.rect(screen, block_col, (block[0]), 1)
                     pygame.draw.rect(screen, bg, (block[0]), 1)
+
     # paddle class    class paddle():
     class paddle():
         def __init__(self):
