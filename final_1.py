@@ -48,7 +48,7 @@ clock = pygame.time.Clock()
 fps = data['speed']
 live_ball = False
 game_over = 0
-
+power_ups = []
 # function for outputting text onto the screen
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
@@ -162,8 +162,9 @@ class GameBall():
                         wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
 
                     # Power-up: 5 Ball
-                    if random.random() < 0.05:  # 5% chance of power-up
-                        spawn_5_balls()
+                    if random.random() < 0.1:  # 5% chance of power-up
+                        powerup.spawn_power_ups()
+
 
                 # check if block still exists, in which case the wall is not destroyed
                 if wall.blocks[row_count][item_count][0] != (0, 0, 0, 0):
@@ -178,16 +179,16 @@ class GameBall():
         # after iterating through all the blocks, check if the wall is destroyed
         if wall_destroyed == 1:
             self.game_over = 1
-
+        elif self.rect.bottom > scrh:
+            self.game_over = -1
+            self.live_ball = False    
         # check for collision with walls
         if self.rect.left < 0 or self.rect.right > scrw:
             self.speed_x *= -1
         # check for collision with top and bottom of the screen
         if self.rect.top < 0:
             self.speed_y *= -1
-        if self.rect.bottom > scrh:
-            self.game_over = -1
-            self.live_ball = False
+        
         # look for collision with paddle
         if self.rect.colliderect(player_paddle.rect):
             # check if colliding from the top
@@ -214,17 +215,51 @@ class GameBall():
         self.x = x - self.ball_rad
         self.y = y
         self.rect = pygame.Rect(self.x, self.y, self.ball_rad * 2, self.ball_rad * 2)
-        self.speed_x = 4
-        self.speed_y = -4
-        self.speed_max = 5
+        self.speed_x = 3
+        self.speed_y = -3
+        self.speed_max = 4
         self.game_over = 0
         self.live_ball = True
-def spawn_5_balls():
-    for _ in range(5):
-        x = random.randint(50, scrw - 50)
-        y = random.randint(50, scrh - 50)
-        new_ball = GameBall(x, y)
-        balls.append(new_ball)
+    def collect_power_ups(self):
+        for power_up in power_ups:
+            if not power_up.is_collected() and self.rect.colliderect(
+                pygame.Rect(power_up.x - power_up.radius, power_up.y - power_up.radius, 2 * power_up.radius, 2 * power_up.radius)
+            ):
+                power_up.collect()
+    def is_off_screen(self):
+        return self.rect.y > scrh
+# power up class
+
+class powerup():
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.radius = 10
+        self.color = (255, 0, 0)  # Red color for the power-up
+        self.collected=False
+    def spawn_power_ups():
+        for _ in range(5):
+            x = random.randint(50, scrw - 50)
+            y = random.randint(50, scrh - 50)
+            new_ball = GameBall(x, y)
+            balls.append(new_ball)
+
+            # Spawn power-up at the same location as the ball
+            power_up = powerup(x, y)
+            power_ups.append(power_up)
+    def draw_power_ups():
+        for power_up in power_ups:
+            if not power_up.is_collected() and not power_up.is_off_screen():
+                pygame.draw.circle(screen, power_up.color, (power_up.x, power_up.y), power_up.radius)
+
+    def is_collected(self):
+        return self.collected
+
+    def is_off_screen(self):
+        return self.y > scrh
+
+    def collect(self):
+        self.collected = True
 
 # create a wall
 wall = Wall()
@@ -238,11 +273,23 @@ balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y 
 live_ball = False
 run = True
 while run:
+    for ball in balls:
+        ball.collect_power_ups()
+        game_over = ball.move()
+
+        if ball.is_off_screen() or game_over != 0:
+            ball.live_ball = False
+    # Check if all balls are not live
+    if not any(ball.live_ball for ball in balls):
+        live_ball = False
+
     clock.tick(fps)
     screen.fill((0, 0, 0))
     # draw all objects
     wall.draw_wall()
     player_paddle.draw()
+    # Draw power-ups
+    powerup.draw_power_ups()
 
     for ball in balls:
         ball.draw()
