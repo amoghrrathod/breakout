@@ -1,4 +1,4 @@
-import os
+import os,sys 
 import tkinter as tk
 from PIL import Image, ImageTk
 from subprocess import Popen
@@ -6,8 +6,8 @@ from subprocess import Popen
 def start_game():
     # Add the code to start your game here
     game_script_path = os.path.join(os.path.dirname(__file__), "final_1.py")
-    Popen(["python", game_script_path])
-
+    Popen(["python3", game_script_path])
+    sys.exit()
 def open_settings():
     # Add code to open settings window or perform settings actions
     print("Open Settings")

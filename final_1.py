@@ -43,7 +43,7 @@ paddle_outline = (105, 105, 105)
 text_col = (255, 255, 255)
 
 # define game variables
-cols = 10
+cols = 17
 rows = 6
 clock = pygame.time.Clock()
 fps = data['speed']
@@ -109,11 +109,8 @@ class Wall():
                 img_rect = brick_image.get_rect(center=(center_x, center_y))
 
                 # Draw the brick image
-                screen.blit(brick_image, img_rect.topleft)
-
-
-
-
+                screen.blit(brick_image, img_rect)
+                
 # paddle class
 class Paddle():
     def __init__(self):
