@@ -1,6 +1,5 @@
 import tkinter as tk,sys,json,random
 from random import Random
-import cv2
 import customtkinter as Ctk
 from tkinter import *
 from customtkinter import *
