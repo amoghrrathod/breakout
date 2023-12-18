@@ -1,6 +1,7 @@
 import tkinter as tk,sys,json,random
 from random import Random
 import cv2
+import numpy
 import customtkinter as Ctk
 from tkinter import *
 from customtkinter import *
@@ -8,6 +9,7 @@ import pygame,sys
 from pygame.locals import *
 from PIL import *
 from subprocess import Popen
+import LevelDefines as level
 data = {"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": 90}
 
 try:
@@ -15,13 +17,15 @@ try:
         data = json.load(setfile)
 except:
     pass
-
+matrix =level.BRICK_LAYOUTS[4]
 pygame.init()
-scrw = 1280
-scrh = 720
-background = pygame.Surface((1280, 720))
+scrw=data['screen_width']
+scrh =data['screen_height']
+background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh))
 pygame.display.set_caption('Brick-slayer')
+#level
+diff=level.BRICK_LAYOUTS[0]
 
 # define font
 font = pygame.font.SysFont('typewriter', 70)
@@ -29,7 +33,8 @@ font = pygame.font.SysFont('typewriter', 70)
 # paint screen one time
 pygame.display.flip()
 status = True
-
+#select level
+select_level=0
 # colours
 bg = (9, 10, 24)
 # block colours
@@ -62,43 +67,48 @@ class Wall():
     def __init__(self):
         self.width = 75
         self.height = 25
-        self.blue_brick_image = pygame.image.load('assets/blue.png').convert_alpha()
-        self.red_brick_image = pygame.image.load('assets/red.png').convert_alpha()
-        self.gold_brick_image = pygame.image.load('assets/gold.png').convert_alpha()
-
-
-    def create_wall(self):
-        self.blocks = []
-        # define an empty list for an individual block
-        block_individual = []
-        for row in range(rows):
-            # reset the block row list
+        self.blocks=[]
+        self.blue_brick_image = pygame.transform.scale(pygame.image.load('assets/blue.png').convert_alpha(),(75,25))
+        self.blue_break= pygame.transform.scale(pygame.image.load('assets/blue_break.png').convert_alpha(),(75,25))
+        self.red_brick_image= pygame.transform.scale(pygame.image.load('assets/red.png').convert_alpha(),(75,25))
+        self.red_brick_image =  pygame.transform.scale(pygame.image.load('assets/red.png').convert_alpha(),(75,25))
+        self.gold_brick_image =  pygame.transform.scale(pygame.image.load('assets/gold.png').convert_alpha(),(75,25))
+        self.gold_break =  pygame.transform.scale(pygame.image.load('assets/gold_break.png').convert_alpha(),(75,25))
+        self.green_break =  pygame.transform.scale(pygame.image.load('assets/green_break.png').convert_alpha(),(75,25))
+        self.green_brick_image =  pygame.transform.scale(pygame.image.load('assets/green.png').convert_alpha(),(75,25))
+        self.yellow_brick_image = pygame.transform.scale(pygame.image.load('assets/yellow.png').convert_alpha(),(75,25))
+        self.yellow_break=pygame.transform.scale(pygame.image.load('assets/yellow_break.png').convert_alpha(),(75,25))
+        self.blank_image=pygame.transform.scale(pygame.image.load('assets/blank.png').convert_alpha(),(75,25))
+    def create_wall(self, matrix):
+        for row_index, row_values in enumerate(matrix):
             block_row = []
-            # iterate through each column in that row
-            for col in range(cols):
-                # generate x and y positions for each block and create a rectangle from that
-                block_x = col * self.width
-                block_y = row * self.height
+            for col_index, strength in enumerate(row_values):
+                if strength == 0:
+                    # If the strength is 0, leave the block blank
+                    continue
+
+                # Generate x and y positions for each block and create a rectangle from that
+                block_x = col_index * self.width
+                block_y = row_index * self.height
                 rect = pygame.Rect(block_x, block_y, self.width, self.height)
-                # give strength randomly to the blocks
-                strength = random.randint(1, 3)
-                # create a list at this point to store the rect and colour data
+
+                # Create a list to store the rect and strength data
                 block_individual = [rect, strength]
-                # append that individual block to the block row
+
+                # Append that individual block to the block row
                 block_row.append(block_individual)
-            # append the row to the full list of blocks
+
+            # Append the row to the full list of blocks
             self.blocks.append(block_row)
 
-    def draw_wall(self):
+    def draw_wall(self, screen):
         for row in self.blocks:
             for block in row:
-                # assign a colour based on block strength
-                if block[1] == 1:
-                    brick_image = self.gold_brick_image
-                elif block[1] == 2:
-                    brick_image = self.red_brick_image
-                elif block[1] == 3:
-                    brick_image = self.blue_brick_image
+                # assign a color based on block strength
+                strength = block[1]
+                if strength == 0:
+                    continue  # Skip if strength is 0
+
                 # Convert the position and size to a pygame.Rect
                 block_rect = pygame.Rect(block[0])
 
@@ -106,11 +116,26 @@ class Wall():
                 center_x, center_y = block_rect.center
 
                 # Calculate the position to blit the image
-                img_rect = brick_image.get_rect(center=(center_x, center_y))
+                img_rect = None
 
-                # Draw the brick image
-                screen.blit(brick_image, img_rect)
-                
+                # Draw the corresponding image based on strength
+                if strength == 1:
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/red.png").convert(),(75,25))
+                    img_rect = brick_image.get_rect(center=(center_x, center_y))
+                elif strength==2:
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/gold.png").convert(),(75,25))
+                    img_rect = brick_image.get_rect(center=(center_x, center_y))
+                elif strength == 3:
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/blue.png").convert(),(75,25))
+                    img_rect = brick_image.get_rect(center=(center_x, center_y))
+                else:
+                    # Add entries for other strengths/colors if needed
+                    continue
+
+                # Draw the image on the screen
+                screen.blit(brick_image, (center_x - img_rect.width / 2, center_y - img_rect.height / 2))
+
+
 # paddle class
 class Paddle():
     def __init__(self):
@@ -171,15 +196,16 @@ class GameBall():
                         wall.blocks[row_count][item_count][1] -= 1
                         global score
                         score += 10
-                        
-                    else:
-                        wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
-
-                    # Power-up: 5 Ball
                     if random.random() < 0.1:  # 5% chance of power-up
-                        powerup.spawn_power_ups()
-
-
+                        powerup.spawn_power_ups()    
+                    elif wall.blocks[row_count][item_count][1] == 1:
+                        wall.blocks[row_count][item_count][1] -= 1
+                        wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
+                        score += 10
+                        # Power-up: 5 Ball
+                        if random.random() < 0.1:  # 10% chance of power-up
+                            powerup.spawn_power_ups()
+                            
                 # check if block still exists, in which case the wall is not destroyed
                 if wall.blocks[row_count][item_count][0] != (0, 0, 0, 0):
                     wall_destroyed = 0
@@ -243,7 +269,6 @@ class GameBall():
     def is_off_screen(self):
         return self.rect.y > scrh
 # power up class
-
 class powerup():
     def __init__(self, x, y):
         self.x = x
@@ -282,7 +307,9 @@ def draw_score():
     draw_text(score_text, score_font, text_col, 10)
 # create a wall
 wall = Wall()
-wall.create_wall()
+
+# Call the create_wall method on the instance
+wall.create_wall(matrix)
 
 # create paddle
 player_paddle = Paddle()
@@ -320,7 +347,7 @@ while run:
                 live_ball = True
                 balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
                 player_paddle.reset()
-                wall.create_wall()
+                wall.create_wall(matrix)
                 score = 0
             elif event.key == pygame.K_ESCAPE:
                 score = 0
@@ -336,7 +363,8 @@ while run:
             live_ball = True
             balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
             player_paddle.reset()
-            wall.create_wall()
+            wall.create_wall(matrix
+                             )
             score = 0
 
     if live_ball:
@@ -355,7 +383,7 @@ while run:
         clock.tick(fps)
         screen.fill((0, 0, 0))
         # draw all objects
-        wall.draw_wall()
+        wall.draw_wall(screen)
         player_paddle.draw()
         # Draw power-ups
         powerup.draw_power_ups()
