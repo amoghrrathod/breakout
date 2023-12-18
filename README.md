@@ -1,2 +1,2 @@
 # Breakout
-A basic breakout game.
+A classic breakout game.
