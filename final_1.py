@@ -10,14 +10,14 @@ from pygame.locals import *
 from PIL import *
 from subprocess import Popen
 import LevelDefines as level
-data = {"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": 90}
+data = {"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": [5,-5]}
 
 try:
     with open('settings.txt') as setfile:
         data = json.load(setfile)
 except:
     pass
-matrix =level.BRICK_LAYOUTS[4]
+
 pygame.init()
 scrw=data['screen_width']
 scrh =data['screen_height']
@@ -25,16 +25,14 @@ background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh))
 pygame.display.set_caption('Brick-slayer')
 #level
-diff=level.BRICK_LAYOUTS[0]
-
+level_number=0
+matrix =level.BRICK_LAYOUTS[level_number]
 # define font
 font = pygame.font.SysFont('typewriter', 70)
-
+speed=[5,-5]
 # paint screen one time
 pygame.display.flip()
 status = True
-#select level
-select_level=0
 # colours
 bg = (9, 10, 24)
 # block colours
@@ -51,7 +49,7 @@ text_col = (255, 255, 255)
 cols = 17
 rows = 6
 clock = pygame.time.Clock()
-fps = data['speed']
+fps = 90
 live_ball = False
 game_over = 0
 power_ups = []
@@ -65,20 +63,9 @@ def draw_text(text, font, text_col,y):
 # brick wall class
 class Wall():
     def __init__(self):
-        self.width = 75
-        self.height = 25
+        self.width = 115
+        self.height = 35
         self.blocks=[]
-        self.blue_brick_image = pygame.transform.scale(pygame.image.load('assets/blue.png').convert_alpha(),(75,25))
-        self.blue_break= pygame.transform.scale(pygame.image.load('assets/blue_break.png').convert_alpha(),(75,25))
-        self.red_brick_image= pygame.transform.scale(pygame.image.load('assets/red.png').convert_alpha(),(75,25))
-        self.red_brick_image =  pygame.transform.scale(pygame.image.load('assets/red.png').convert_alpha(),(75,25))
-        self.gold_brick_image =  pygame.transform.scale(pygame.image.load('assets/gold.png').convert_alpha(),(75,25))
-        self.gold_break =  pygame.transform.scale(pygame.image.load('assets/gold_break.png').convert_alpha(),(75,25))
-        self.green_break =  pygame.transform.scale(pygame.image.load('assets/green_break.png').convert_alpha(),(75,25))
-        self.green_brick_image =  pygame.transform.scale(pygame.image.load('assets/green.png').convert_alpha(),(75,25))
-        self.yellow_brick_image = pygame.transform.scale(pygame.image.load('assets/yellow.png').convert_alpha(),(75,25))
-        self.yellow_break=pygame.transform.scale(pygame.image.load('assets/yellow_break.png').convert_alpha(),(75,25))
-        self.blank_image=pygame.transform.scale(pygame.image.load('assets/blank.png').convert_alpha(),(75,25))
     def create_wall(self, matrix):
         for row_index, row_values in enumerate(matrix):
             block_row = []
@@ -120,41 +107,50 @@ class Wall():
 
                 # Draw the corresponding image based on strength
                 if strength == 1:
-                    brick_image = pygame.transform.scale(pygame.image.load("assets/red.png").convert(),(75,25))
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/red.png").convert(),(115,35))
                     img_rect = brick_image.get_rect(center=(center_x, center_y))
                 elif strength==2:
-                    brick_image = pygame.transform.scale(pygame.image.load("assets/gold.png").convert(),(75,25))
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/gold.png").convert(),(115,35))
                     img_rect = brick_image.get_rect(center=(center_x, center_y))
                 elif strength == 3:
-                    brick_image = pygame.transform.scale(pygame.image.load("assets/blue.png").convert(),(75,25))
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/blue.png").convert(),(115,35))
+                    img_rect = brick_image.get_rect(center=(center_x, center_y))
+                elif strength ==4:
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/purple.png").convert(),(115,35))
+                    img_rect = brick_image.get_rect(center=(center_x, center_y))
+                elif strength ==5:
+                    brick_image = pygame.transform.scale(pygame.image.load("assets/green.png").convert(),(115,35))
                     img_rect = brick_image.get_rect(center=(center_x, center_y))
                 else:
-                    # Add entries for other strengths/colors if needed
                     continue
 
                 # Draw the image on the screen
                 screen.blit(brick_image, (center_x - img_rect.width / 2, center_y - img_rect.height / 2))
-
-
 # paddle class
 class Paddle():
     def __init__(self):
         self.reset()
-        self.image=pygame.image.load('assets/paddle_purple.png').convert_alpha()
+        self.image=pygame.image.load('assets/paddle.png').convert_alpha()
 
     def move(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         self.x = mouse_x - self.width // 2
+
+        # Ensure the paddle stays within the screen boundaries
+        if self.x < 0:
+            self.x = 0
+        elif self.x + self.width > scrw:
+            self.x = scrw - self.width
+
         self.y = scrh - self.height
         self.rect = Rect(self.x, self.y, self.width, self.height)
-
     def draw(self):
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
     def reset(self):
         # define paddle variables
-        self.height = 25
-        self.width = 200
+        self.height = 30
+        self.width = 114
         self.x = int((scrw / 2) - (self.width / 2))
         self.y = scrh - (self.height * 2)
         self.speed = 10
@@ -186,24 +182,24 @@ class GameBall():
                         self.speed_y *= -1
                     # check if collision was from left
                     if abs(self.rect.right - item[0].left) < collision_thresh and self.speed_x > 0:
-                        self.speed_x *= -1 / 2
+                        self.speed_x *= -1
                     # check if collision was from right
                     if abs(self.rect.left - item[0].right) < collision_thresh and self.speed_x < 0:
-                        self.speed_x *= -1 / 2
+                        self.speed_x *= -1
 
                     # reduce the block's strength by doing damage to block
                     if wall.blocks[row_count][item_count][1] > 1:
                         wall.blocks[row_count][item_count][1] -= 1
                         global score
                         score += 10
-                    if random.random() < 0.1:  # 5% chance of power-up
+                    if random.random() < 0.005:  # 1% chance of power-up
                         powerup.spawn_power_ups()    
                     elif wall.blocks[row_count][item_count][1] == 1:
                         wall.blocks[row_count][item_count][1] -= 1
                         wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
                         score += 10
                         # Power-up: 5 Ball
-                        if random.random() < 0.1:  # 10% chance of power-up
+                        if random.random() < 0.005:  # 1% chance of power-up
                             powerup.spawn_power_ups()
                             
                 # check if block still exists, in which case the wall is not destroyed
@@ -223,12 +219,17 @@ class GameBall():
             self.game_over = -1
             self.live_ball = False    
         # check for collision with walls
-        if self.rect.left < 0 or self.rect.right > scrw:
-            self.speed_x *= -1
+        # check for collision with walls
+        if self.rect.left < 0:
+            self.speed_x = abs(self.speed_x)  # Reverse direction
+            self.rect.left = 0  # Adjust position to stay within the screen
+        elif self.rect.right > scrw:
+            self.speed_x = -abs(self.speed_x)  # Reverse direction
+            self.rect.right = scrw  # Adjust position to stay within the screen
+
         # check for collision with top and bottom of the screen
         if self.rect.top < 0:
             self.speed_y *= -1
-        
         # look for collision with paddle
         if self.rect.colliderect(player_paddle.rect):
             # check if colliding from the top
@@ -255,9 +256,9 @@ class GameBall():
         self.x = x - self.ball_rad
         self.y = y
         self.rect = pygame.Rect(self.x, self.y, self.ball_rad * 2, self.ball_rad * 2)
-        self.speed_x = 4
-        self.speed_y = -4
-        self.speed_max = 6
+        self.speed_x = speed[0]
+        self.speed_y = speed[1]
+        self.speed_max = 7
         self.game_over = 0
         self.live_ball = True
     def collect_power_ups(self):
@@ -315,7 +316,7 @@ wall.create_wall(matrix)
 player_paddle = Paddle()
 
 # create initial ball
-balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
+balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height),speed]
 live_ball = False
 # before the game starts, to prevent a blank screen 
 start_image = pygame.image.load('assets/Untitled.png').convert_alpha()  # Replace with the actual path to your logo image
@@ -331,8 +332,6 @@ while waiting_for_input:
         elif event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-
-run = True
 run = True
 while run:
     for event in pygame.event.get():
@@ -363,8 +362,7 @@ while run:
             live_ball = True
             balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
             player_paddle.reset()
-            wall.create_wall(matrix
-                             )
+            wall.create_wall(matrix)
             score = 0
 
     if live_ball:
@@ -380,7 +378,7 @@ while run:
         if not any(ball.live_ball for ball in balls):
             live_ball = False
 
-        clock.tick(fps)
+        clock.tick(120)
         screen.fill((0, 0, 0))
         # draw all objects
         wall.draw_wall(screen)
