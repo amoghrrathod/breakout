@@ -25,7 +25,7 @@ background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh))
 pygame.display.set_caption('Brick-slayer')
 #level
-level_number=0
+level_number=3
 matrix =level.BRICK_LAYOUTS[level_number]
 # define font
 font = pygame.font.SysFont('typewriter', 70)
