@@ -1,8 +1,4 @@
 import sys,json,random
-import cv2
-import customtkinter as Ctk
-from tkinter import *
-from customtkinter import *
 import pygame,sys
 from pygame.locals import *
 from PIL import *
