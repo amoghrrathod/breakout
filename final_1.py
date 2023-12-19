@@ -1,17 +1,13 @@
-import tkinter as tk,sys,json,random
-from random import Random
+import sys,json,random
 import cv2
-import numpy
 import customtkinter as Ctk
 from tkinter import *
 from customtkinter import *
 import pygame,sys
 from pygame.locals import *
 from PIL import *
-from subprocess import Popen
 import LevelDefines as level
 data = {"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": [5,-5]}
-
 try:
     with open('settings.txt') as setfile:
         data = json.load(setfile)
@@ -31,7 +27,7 @@ matrix =level.BRICK_LAYOUTS[level_number]
 font = pygame.font.SysFont('typewriter', 70)
 speed=[5,-5]
 # paint screen one time
-pygame.display.flip()
+pygame.display.update()
 status = True
 # colours
 bg = (9, 10, 24)
@@ -322,7 +318,7 @@ live_ball = False
 start_image = pygame.image.load('assets/Untitled.png').convert_alpha()  # Replace with the actual path to your logo image
 logo_rect = start_image.get_rect()
 screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
-pygame.display.flip()
+pygame.display.update()
 
 waiting_for_input = True
 while waiting_for_input:
@@ -354,10 +350,6 @@ while run:
                     json.dump(data, setfile)
                 pygame.quit()
                 sys.exit(0)
-            elif event.key == pygame.K_m:
-                game_script_path = os.path.join(os.path.dirname(__file__), "menu.py")
-                Popen(["python3", game_script_path])
-                sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN and not live_ball:
             live_ball = True
             balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
