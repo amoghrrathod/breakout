@@ -1,5 +1,5 @@
 import sys,json,random,math
-import pygame,sys
+import pygame
 from pygame.locals import *
 from PIL import *
 import LevelDefines as level
