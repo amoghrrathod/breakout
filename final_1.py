@@ -1,4 +1,4 @@
-import sys,json,random,math
+import sys,json,random,math,time
 import pygame,sys
 from pygame.locals import *
 from PIL import *
@@ -9,7 +9,15 @@ try:
         data = json.load(setfile)
 except:
     pass
-
+#highscore
+highest_score=0
+high_score_file = 'high_score.txt'  # File to store the high score
+try:
+    with open(high_score_file, 'r') as file:
+        high_score = int(file.read())
+except FileNotFoundError:
+    high_score = 0
+#initialise pygame module
 pygame.init()
 pygame.display.init()
 scrw=data['screen_width']
@@ -17,6 +25,8 @@ scrh =data['screen_height']
 background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh), DOUBLEBUF | HWSURFACE)
 pygame.display.set_caption('Brick-slayer')
+#time 
+start_time = time.time()
 #level
 level_number=5
 matrix =level.BRICK_LAYOUTS[level_number-1]
@@ -44,10 +54,14 @@ live_ball = False
 game_over = 0
 power_ups = []
 score=0
+#power up cooldown 
+powerup_chance = 0.005
+power_up_spawn_cooldown = 20
+power_up_spawn_interval = 5000
 # function for outputting text onto the screen
-def draw_text(text, font, text_col,y):
+def draw_text(text, font, text_col,x,y):
     img = font.render(text, True, text_col)
-    text_rect = img.get_rect(center=(scrw/2,y))
+    text_rect = img.get_rect(center=(x,y))
     screen.blit(img, text_rect)
 
 # brick wall class
@@ -145,6 +159,13 @@ class Paddle():
 
         self.y = scrh - self.height
         self.rect = Rect(self.x, self.y, self.width, self.height)
+    def increase_width(self):
+        self.width += 35  # Adjust the width increase as needed
+        self.image = pygame.transform.scale(
+            pygame.image.load('assets/paddle.png').convert_alpha(),
+            (self.width, self.height)
+        )  # Add a method to increase the width in the Paddle class
+
     def draw(self):
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
@@ -194,14 +215,14 @@ class GameBall():
                         wall.blocks[row_count][item_count][1] -= 1
                         global score
                         score += 10
-                    if random.random() < 0.005:  # 1% chance of power-up
+                    if random.random() < powerup_chance:  # 1% chance of power-up
                         powerup.spawn_power_ups()    
                     elif wall.blocks[row_count][item_count][1] == 1:
                         wall.blocks[row_count][item_count][1] -= 1
                         wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
                         score += 10
                         # Power-up: 5 Ball
-                        if random.random() < 0.005:  # 1% chance of power-up
+                        if random.random() < powerup_chance:  # 1% chance of power-up
                             powerup.spawn_power_ups()
                             
                 # check if block still exists, in which case the wall is not destroyed
@@ -267,19 +288,50 @@ class GameBall():
                 pygame.Rect(power_up.x - power_up.radius, power_up.y - power_up.radius, 2 * power_up.radius, 2 * power_up.radius)
             ):
                 power_up.collect()
+
+                # Apply the effect of the power-up
+                if power_up.powerup_type == "width_increase":
+                    player_paddle.increase_width()  # Add a method to increase the width in the Paddle class
+    def collect_power_ups(self):
+        for power_up in power_ups:
+            if not power_up.is_collected() and self.rect.colliderect(
+                pygame.Rect(power_up.x - power_up.radius, power_up.y - power_up.radius, 2 * power_up.radius, 2 * power_up.radius)
+            ):
+                power_up.collect()
+
+                # Apply the effect of the power-up
+                if power_up.powerup_type == "width_increase":
+                    player_paddle.increase_width()  # Add a method to increase the width in the Paddle class
+
     def is_off_screen(self):
         return self.rect.y > scrh
+    def create_multiball():
+        # Create a new ball above the paddle
+        new_ball = GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
+        new_ball.speed_x = random.choice([-5, 5])  # Randomize initial horizontal speed
+        new_ball.speed_y = -5  # Adjust speed as needed
+        balls.append(new_ball)
 # power up class
 class powerup():
-    def __init__(self, x, y):
+    def __init__(self, x, y,powerup_type):
         self.x = x
         self.y = y
         self.radius = 10
         self.color = (255, 0, 0)  # Red color for the power-up
         self.collected=False
+        self.powerup_type = powerup_type
     
     @staticmethod
     def spawn_power_ups():
+        global power_up_spawn_cooldown
+
+        # Check the cooldown before spawning new power-ups
+        current_time = pygame.time.get_ticks()
+        if current_time - power_up_spawn_cooldown < power_up_spawn_interval:
+            return
+
+        # Reset the cooldown after spawning power-ups
+        power_up_spawn_cooldown = current_time
         # Get the center of the paddle
         paddle_center_x = player_paddle.x + player_paddle.width // 2
         paddle_center_y = player_paddle.y - player_paddle.height // 2
@@ -301,9 +353,29 @@ class powerup():
             new_ball.speed_y = new_speed_y
             balls.append(new_ball)
 
-            # Spawn power-up at the same location as the ball
-            power_up = powerup(new_x, new_y)
+        # Randomly decide whether to spawn a width increase power-up
+        if random.random() < powerup_chance:  # Adjust the probability as needed
+            # Choose a random location above the center of the paddle
+            power_up_x = paddle_center_x + random.randint(-50, 50)
+            power_up_y = paddle_center_y - random.randint(50, 100)  # Adjust the distance above the paddle
+
+            # Spawn power-up at the chosen location
+            power_up = powerup(power_up_x, power_up_y, "width_increase")  # Use the desired power-up type
             power_ups.append(power_up)
+
+
+    @staticmethod
+    def draw_power_ups():
+        for power_up in power_ups:
+            if not power_up.is_collected() and not power_up.is_off_screen():
+                # Draw the power-up image
+                if power_up.powerup_type == "width_increase":
+                    powerup_width_image = pygame.transform.scale(
+                        pygame.image.load("assets/paddle_width.png").convert_alpha(),  # Adjust the path
+                        (power_up.radius * 2, power_up.radius * 2)
+                    )
+                    screen.blit(powerup_width_image, (power_up.x - power_up.radius, power_up.y - power_up.radius))
+
 
     def draw_power_ups():
         for power_up in power_ups:
@@ -318,12 +390,27 @@ class powerup():
 
     def collect(self):
         self.collected = True
+        # Apply the effect of the power-up
+        if self.powerup_type.lower() == "width_increase":
+            player_paddle.increase_width()  # Add a method to increase the width in the Paddle class
+
+#tiem elapsed 
+def get_elapsed_time():
+    if start_time is not None:
+        return time.time() - start_time
+    return 0
 
 #score
 def draw_score():
     score_font = pygame.font.SysFont('typewriter', 40)
+    # Draw score, bonus, and timer
     score_text = f"Score: {score}"
-    draw_text(score_text, score_font, text_col, 10)
+    draw_text(score_text, score_font, text_col, scrw-100,scrh-40)
+
+    # Display high score
+    high_score_font = pygame.font.SysFont('typewriter',40)
+    high_score_text = f"High Score: {high_score}"
+    draw_text(high_score_text, high_score_font, text_col,120,scrh-40)
 
 #clock
 clock = pygame.time.Clock()
@@ -346,17 +433,17 @@ start_image = pygame.image.load('assets/Untitled.png').convert_alpha()
 logo_rect = start_image.get_rect()
 
 waiting_for_input = True
-selected_level = 1
 while waiting_for_input:
     clock.tick(60)
-    current_time=pygame.time.get_ticks() 
-    screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
+    current_time = pygame.time.get_ticks()
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
-                waiting_for_input=False
+            if event.key == pygame.K_SPACE:
+                waiting_for_input = False
+        elif event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
         pygame.display.update()
-
-level_number=selected_level
 
 waiting_for_input = True
 while waiting_for_input:
@@ -377,15 +464,6 @@ while waiting_for_input:
                 balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
                 clock = pygame.time.Clock()
                 score = 0
-            elif event.key ==K_RETURN:
-                level_number+=1
-                live_ball = True
-                balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
-                player_paddle.reset()
-                wall.create_wall(matrix)
-                balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
-                clock = pygame.time.Clock()
-                score=score
             elif event.key == pygame.K_ESCAPE:
                 score = 0
                 with open('settings.txt', 'w') as setfile:
@@ -398,14 +476,19 @@ while waiting_for_input:
             balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
             player_paddle.reset()
             wall.create_wall(matrix)
-            balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height )
+            balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
             clock = pygame.time.Clock()
             score = 0
 
     if live_ball:
         player_paddle.move()  # Move the paddle first
+
+        # Handle power-ups
         for ball in balls:
             ball.collect_power_ups()
+
+        # Move and check collision for each ball
+        for ball in balls:
             game_over = ball.move()
 
             if ball.is_off_screen() or game_over != 0:
@@ -414,28 +497,38 @@ while waiting_for_input:
         # Check if all balls are not live
         if not any(ball.live_ball for ball in balls):
             live_ball = False
+
         screen.fill((0, 0, 0))
-        # draw all objects
+
+        # Draw all objects
         wall.draw_wall(screen)
         player_paddle.draw()
+        
         # Draw power-ups
         powerup.draw_power_ups()
 
         for ball in balls:
             ball.draw()
 
-        # print player instructions
+        # Print player instructions
         if not live_ball:
+            # Start the timer when the game begins
+            start_time = pygame.time.get_ticks()
             if game_over == 1:
-                exit_image =  pygame.image.load('assets/exit.png').convert_alpha()
+                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
                 exit_rect = exit_image.get_rect()
                 screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
             elif game_over == -1:
-                exit_image = pygame.image.load('assets/exit.png')
+                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
                 exit_rect = exit_image.get_rect()
                 screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
+
         draw_score()
-        pygame.display.update()
+    if score > high_score:
+            high_score = score
+            with open(high_score_file, 'w') as file:
+                file.write(str(high_score))
+    pygame.display.update()
 
 pygame.display.quit()
 pygame.quit()
