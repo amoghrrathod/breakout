@@ -1,4 +1,4 @@
-import sys,json,random
+import sys,json,random,math
 import pygame,sys
 from pygame.locals import *
 from PIL import *
@@ -11,13 +11,14 @@ except:
     pass
 
 pygame.init()
+pygame.display.init()
 scrw=data['screen_width']
 scrh =data['screen_height']
 background = pygame.Surface((scrw, scrh))
-screen = pygame.display.set_mode((scrw, scrh))
+screen = pygame.display.set_mode((scrw, scrh), DOUBLEBUF | HWSURFACE)
 pygame.display.set_caption('Brick-slayer')
 #level
-level_number=1
+level_number=5
 matrix =level.BRICK_LAYOUTS[level_number-1]
 # define font
 font = pygame.font.SysFont('typewriter', 70)
@@ -219,7 +220,6 @@ class GameBall():
             self.game_over = -1
             self.live_ball = False    
         # check for collision with walls
-        # check for collision with walls
         if self.rect.left < 0:
             self.speed_x = abs(self.speed_x)  # Reverse direction
             self.rect.left = 0  # Adjust position to stay within the screen
@@ -276,16 +276,34 @@ class powerup():
         self.radius = 10
         self.color = (255, 0, 0)  # Red color for the power-up
         self.collected=False
+    
+    @staticmethod
     def spawn_power_ups():
-        for _ in range(5):
-            x = random.randint(50, scrw - 50)
-            y = random.randint(50, scrh - 50)
-            new_ball = GameBall(x, y)
+        # Get the center of the paddle
+        paddle_center_x = player_paddle.x + player_paddle.width // 2
+        paddle_center_y = player_paddle.y - player_paddle.height // 2
+
+        # Define angles (in radians) for the new balls
+        angles = [0.4, 0.6, 0.8, 1.0, 1.2]
+
+        for angle in angles:
+            distance_from_center = 30  # Adjust the distance from the center of the paddle
+            new_x = paddle_center_x + int(distance_from_center * math.cos(angle))
+            new_y = paddle_center_y + int(distance_from_center * math.sin(angle))
+
+            new_speed_x = math.cos(angle) * 5  # Adjust speed as needed
+            new_speed_y = math.sin(angle) * -5  # Adjust speed as needed
+
+            # Create a new ball above the paddle
+            new_ball = GameBall(new_x, new_y)
+            new_ball.speed_x = new_speed_x
+            new_ball.speed_y = new_speed_y
             balls.append(new_ball)
 
             # Spawn power-up at the same location as the ball
-            power_up = powerup(x, y)
+            power_up = powerup(new_x, new_y)
             power_ups.append(power_up)
+
     def draw_power_ups():
         for power_up in power_ups:
             if not power_up.is_collected() and not power_up.is_off_screen():
