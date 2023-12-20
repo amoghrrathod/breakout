@@ -126,6 +126,7 @@ def calculate_ball_speed(remaining_blocks):
             return 8
         else:
             return 9
+
 # paddle class
 class Paddle():
     def __init__(self):
@@ -323,6 +324,7 @@ def draw_score():
     score_font = pygame.font.SysFont('typewriter', 40)
     score_text = f"Score: {score}"
     draw_text(score_text, score_font, text_col, 10)
+
 #clock
 clock = pygame.time.Clock()
 
@@ -338,6 +340,7 @@ player_paddle = Paddle()
 # create initial ball
 balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height),speed]
 live_ball = False
+
 # before the game starts, to prevent a blank screen 
 start_image = pygame.image.load('assets/Untitled.png').convert_alpha() 
 logo_rect = start_image.get_rect()
@@ -352,7 +355,7 @@ while waiting_for_input:
         if event.type == pygame.KEYDOWN:
                 waiting_for_input=False
         pygame.display.update()
-        
+
 level_number=selected_level
 
 waiting_for_input = True
@@ -426,7 +429,6 @@ while waiting_for_input:
             if game_over == 1:
                 exit_image =  pygame.image.load('assets/exit.png').convert_alpha()
                 exit_rect = exit_image.get_rect()
-                draw_text("Press enter/return to play the next level ", font, "Yellow",600)
                 screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
             elif game_over == -1:
                 exit_image = pygame.image.load('assets/exit.png')
