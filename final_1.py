@@ -3,7 +3,7 @@ import pygame,sys
 from pygame.locals import *
 from PIL import *
 import LevelDefines as level
-data = {"screen_width": 1280, "screen_height": 720, "scr": "1280x720", "speed": [5,-5]}
+data = {"screen_width": 1680, "screen_height": 1050, "scr": "1680x1050", "speed": [5,-5]}
 try:
     with open('settings.txt') as setfile:
         data = json.load(setfile)
@@ -17,14 +17,11 @@ background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh))
 pygame.display.set_caption('Brick-slayer')
 #level
-level_number=3
-matrix =level.BRICK_LAYOUTS[level_number]
+level_number=1
+matrix =level.BRICK_LAYOUTS[level_number-1]
 # define font
 font = pygame.font.SysFont('typewriter', 70)
 speed=[5,-5]
-# paint screen one time
-pygame.display.update()
-status = True
 # colours
 bg = (9, 10, 24)
 # block colours
@@ -118,6 +115,16 @@ class Wall():
 
                 # Draw the image on the screen
                 screen.blit(brick_image, (center_x - img_rect.width / 2, center_y - img_rect.height / 2))
+
+def calculate_ball_speed(remaining_blocks):
+        if remaining_blocks < 5:
+            return 6
+        elif remaining_blocks < 10:
+            return 7
+        elif remaining_blocks < 15:
+            return 8
+        else:
+            return 9
 # paddle class
 class Paddle():
     def __init__(self):
@@ -154,6 +161,7 @@ class GameBall():
     def __init__(self, x, y):
         self.reset(x, y)
         self.image = pygame.image.load('assets/ball.png').convert_alpha()
+        self.remaining_blocks = len(matrix) * len(matrix[0])
 
     def move(self):
         # collision threshold
@@ -233,7 +241,7 @@ class GameBall():
                 elif self.speed_x < 0 and self.speed_x < -self.speed_max:
                     self.speed_x = -self.speed_max
             else:
-                self.speed_x *= -1
+                self.speed_max = calculate_ball_speed(ball.remaining_blocks)
 
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
@@ -242,15 +250,14 @@ class GameBall():
 
     def draw(self):
         screen.blit(self.image, (self.rect.x, self.rect.y))
-
     def reset(self, x, y):
         self.ball_rad = 11
         self.x = x - self.ball_rad
         self.y = y
         self.rect = pygame.Rect(self.x, self.y, self.ball_rad * 2, self.ball_rad * 2)
-        self.speed_x = speed[0]
-        self.speed_y = speed[1]
-        self.speed_max = 7
+        self.speed_x = 5
+        self.speed_y = -5
+        self.speed_max = 6
         self.game_over = 0
         self.live_ball = True
     def collect_power_ups(self):
@@ -298,6 +305,9 @@ def draw_score():
     score_font = pygame.font.SysFont('typewriter', 40)
     score_text = f"Score: {score}"
     draw_text(score_text, score_font, text_col, 10)
+#clock
+clock = pygame.time.Clock()
+
 # create a wall
 wall = Wall()
 
@@ -311,21 +321,25 @@ player_paddle = Paddle()
 balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height),speed]
 live_ball = False
 # before the game starts, to prevent a blank screen 
-start_image = pygame.image.load('assets/Untitled.png').convert_alpha()  # Replace with the actual path to your logo image
+start_image = pygame.image.load('assets/Untitled.png').convert_alpha() 
 logo_rect = start_image.get_rect()
-screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
-pygame.display.update()
+
+waiting_for_input = True
+selected_level = 1
+while waiting_for_input:
+    clock.tick(60)
+    current_time=pygame.time.get_ticks() 
+    screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+                waiting_for_input=False
+        pygame.display.update()
+        
+level_number=selected_level
 
 waiting_for_input = True
 while waiting_for_input:
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            waiting_for_input = False
-        elif event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-run = True
-while run:
+    clock.tick(120)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -339,18 +353,32 @@ while run:
                 balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
                 player_paddle.reset()
                 wall.create_wall(matrix)
+                balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
+                clock = pygame.time.Clock()
                 score = 0
+            elif event.key ==K_RETURN:
+                level_number+=1
+                live_ball = True
+                balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
+                player_paddle.reset()
+                wall.create_wall(matrix)
+                balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
+                clock = pygame.time.Clock()
+                score=score
             elif event.key == pygame.K_ESCAPE:
                 score = 0
                 with open('settings.txt', 'w') as setfile:
                     json.dump(data, setfile)
                 pygame.quit()
                 sys.exit(0)
+                clock = pygame.time.Clock()
         elif event.type == pygame.MOUSEBUTTONDOWN and not live_ball:
             live_ball = True
             balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
             player_paddle.reset()
             wall.create_wall(matrix)
+            balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height )
+            clock = pygame.time.Clock()
             score = 0
 
     if live_ball:
@@ -365,8 +393,6 @@ while run:
         # Check if all balls are not live
         if not any(ball.live_ball for ball in balls):
             live_ball = False
-
-        clock.tick(120)
         screen.fill((0, 0, 0))
         # draw all objects
         wall.draw_wall(screen)
@@ -380,11 +406,12 @@ while run:
         # print player instructions
         if not live_ball:
             if game_over == 1:
-                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
+                exit_image =  pygame.image.load('assets/exit.png').convert_alpha()
                 exit_rect = exit_image.get_rect()
+                draw_text("Press enter/return to play the next level ", font, "Yellow",600)
                 screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
             elif game_over == -1:
-                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
+                exit_image = pygame.image.load('assets/exit.png')
                 exit_rect = exit_image.get_rect()
                 screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
         draw_score()
