@@ -354,7 +354,7 @@ class powerup():
             balls.append(new_ball)
 
         # Randomly decide whether to spawn a width increase power-up
-        if random.random() < powerup_chance:  # Adjust the probability as needed
+        if random.random() < 0.5:  # Adjust the probability as needed
             # Choose a random location above the center of the paddle
             power_up_x = paddle_center_x + random.randint(-50, 50)
             power_up_y = paddle_center_y - random.randint(50, 100)  # Adjust the distance above the paddle
