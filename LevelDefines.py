@@ -64,25 +64,3 @@ BRICK_LAYOUTS = [
 
 
 ]
-
-LEVEL_NUM = len(BRICK_LAYOUTS)
-
-
-BRICKS_PER_ROW = 9
-BRICK_ROWS = 9
-BRICK_SPACE = [2, 2]
-# brick status
-BRICK_DESTR = 0
-BRICK_NORMAL = 1
-BRICK_ADV = 2
-BRICK_UNDESTR = 3
-BRICK_SPECIAL = 4
-# brick sprite image according to status
-BRICK_IMAGE = \
-    [
-        "res/img/blank.png",
-        "res/img/blue.png",
-        "res/img/gold.png",
-        "res/img/red.png",
-        "res/img/brick_special.png"
-    ]

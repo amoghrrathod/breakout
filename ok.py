@@ -436,7 +436,6 @@ waiting_for_input = True
 while waiting_for_input:
     clock.tick(60)
     current_time = pygame.time.get_ticks()
-    screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
