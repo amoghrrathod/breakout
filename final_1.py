@@ -3,6 +3,7 @@ import pygame,sys
 from pygame.locals import *
 from PIL import *
 import LevelDefines as level
+from itertools import cycle
 data = {"screen_width": 1680, "screen_height": 1050, "scr": "1680x1050", "speed": [5,-5]}
 try:
     with open('settings.txt') as setfile:
@@ -19,12 +20,16 @@ except FileNotFoundError:
     high_score = 0
 #initialise pygame module
 pygame.init()
+pygame.mixer.init()
 pygame.display.init()
 scrw=data['screen_width']
 scrh =data['screen_height']
 background = pygame.Surface((scrw, scrh))
 screen = pygame.display.set_mode((scrw, scrh), DOUBLEBUF | HWSURFACE)
 pygame.display.set_caption('Brick-slayer')
+#music
+brick_sound =pygame.mixer.Sound('res/sound/brick.wav')
+bounce=pygame.mixer.Sound('res/sound/bounce.wav')
 #time 
 start_time = time.time()
 #level
@@ -34,7 +39,7 @@ matrix =level.BRICK_LAYOUTS[level_number-1]
 font = pygame.font.SysFont('typewriter', 70)
 speed=[5,-5]
 # colours
-bg = (9, 10, 24)
+bg = (0,0,0)
 # block colours
 block_gold_outline = (255, 215, 0)
 block_magenta_outline = (255, 0, 255)
@@ -44,12 +49,13 @@ paddle_col = (255, 255, 255)
 paddle_outline = (105, 105, 105)
 # text colour
 text_col = (255, 255, 255)
+#load sound
 
 # define game variables
 cols = 17
 rows = 6
 clock = pygame.time.Clock()
-fps = 90
+fps = 120
 live_ball = False
 game_over = 0
 power_ups = []
@@ -187,6 +193,7 @@ class GameBall():
         self.remaining_blocks = len(matrix) * len(matrix[0])
 
     def move(self):
+        global ball
         # collision threshold
         collision_thresh = 6
         wall_destroyed = 1
@@ -221,6 +228,7 @@ class GameBall():
                         wall.blocks[row_count][item_count][1] -= 1
                         wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
                         score += 10
+                        brick_sound.play()
                         # Power-up: 5 Ball
                         if random.random() < powerup_chance:  # 1% chance of power-up
                             powerup.spawn_power_ups()
@@ -245,15 +253,18 @@ class GameBall():
         if self.rect.left < 0:
             self.speed_x = abs(self.speed_x)  # Reverse direction
             self.rect.left = 0  # Adjust position to stay within the screen
+            bounce.play()
         elif self.rect.right > scrw:
             self.speed_x = -abs(self.speed_x)  # Reverse direction
             self.rect.right = scrw  # Adjust position to stay within the screen
-
+            bounce.play()
         # check for collision with top and bottom of the screen
         if self.rect.top < 0:
             self.speed_y *= -1
+            bounce.play()
         # look for collision with paddle
         if self.rect.colliderect(player_paddle.rect):
+            bounce.play()
             # check if colliding from the top
             if abs(self.rect.bottom - player_paddle.rect.top) < collision_thresh and self.speed_y > 0:
                 self.speed_y *= -1
@@ -277,9 +288,9 @@ class GameBall():
         self.x = x - self.ball_rad
         self.y = y
         self.rect = pygame.Rect(self.x, self.y, self.ball_rad * 2, self.ball_rad * 2)
-        self.speed_x = 5
-        self.speed_y = -5
-        self.speed_max = 6
+        self.speed_x = 6
+        self.speed_y = -6
+        self.speed_max = 10
         self.game_over = 0
         self.live_ball = True
     def collect_power_ups(self):
@@ -402,7 +413,7 @@ def get_elapsed_time():
 
 #score
 def draw_score():
-    score_font = pygame.font.SysFont('typewriter', 40)
+    score_font = pygame.font.SysFont('comicsans', 40)
     # Draw score, bonus, and timer
     score_text = f"Score: {score}"
     draw_text(score_text, score_font, text_col, scrw-100,scrh-40)
@@ -411,12 +422,83 @@ def draw_score():
     high_score_font = pygame.font.SysFont('typewriter',40)
     high_score_text = f"High Score: {high_score}"
     draw_text(high_score_text, high_score_font, text_col,120,scrh-40)
+    
+def cycle_title_color():
+    """
+    Fades between different RGB values for certain game
+    screen titles.
+    """
+    global col_cycle_step
+    global next_color
+    global active_color
+    global current_color
+
+    col_cycle_step += 1
+    if col_cycle_step < fps:
+        current_color = [x + (((y - x) / fps) * col_cycle_step) for x, y in
+                         zip(active_color, next_color)]
+
+    else:
+        col_cycle_step = 1
+        active_color = next_color
+        next_color = next(title_colors)
+title_colors = cycle([(234, 178, 114), (229, 71, 68), (165, 68, 229), (68, 84, 221), (196, 221, 68)])
+active_color = next(title_colors)
+next_color = next(title_colors)
+current_color = active_color
+col_cycle_step = 1
+def game_over():
+    global is_game_intro,is_game
+    global is_game_over
+    try:
+
+        while is_game_over:
+            # load font and render text
+            font = pygame.font.Font("res/font/Game_Played.otf", 20)
+            go_title = font.render("GAME OVER", True, current_color, bg).convert_alpha()
+            go_descr = font.render("PRESS SPACE", True, (244, 131, 66), bg).convert_alpha()
+
+            # event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        quit()
+                    if event.key == pygame.K_f:
+                        pygame.display.toggle_fullscreen()
+            # key events
+            pressed = pygame.key.get_pressed()
+            if pressed[pygame.K_SPACE]:
+                is_game = True
+                is_game_over = False
+
+            cycle_title_color()
+
+            screen.fill(bg)
+
+            # display blinking title text
+            screen.blit(go_title,
+                        (scrw / 2 - go_title.get_width() / 2, scrh / 3 - go_title.get_height() / 2))
+
+            screen.blit(go_descr,
+                        (scrw / 2 - go_descr.get_width() / 2, scrh / 2 + go_title.get_height() * 2))
+
+            # update screen
+            pygame.display.update()
+            clock.tick(fps)
+
+    except Exception as go_e:
+        print("Unknown Error occured! Error: " + str(go_e))
+        return
 
 #clock
 clock = pygame.time.Clock()
 
 # create a wall
 wall = Wall()
+
+
 
 # Call the create_wall method on the instance
 wall.create_wall(matrix)
@@ -432,104 +514,217 @@ live_ball = False
 start_image = pygame.image.load('assets/Untitled.png').convert_alpha() 
 logo_rect = start_image.get_rect()
 
-waiting_for_input = True
-while waiting_for_input:
-    clock.tick(60)
-    current_time = pygame.time.get_ticks()
-    screen.blit(start_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                waiting_for_input = False
-        elif event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        pygame.display.update()
+TITLE_BLINK_EVENT = pygame.USEREVENT + 0
+# bools for menu handling
+is_game_over = False
+is_game_intro = True
+is_running = True
+is_game = False
+def game_intro():
+    """
+    Game Intro screen.
+    """
+    global is_game_intro
+    global is_game
+    global is_game_over
+    global current_color
 
-waiting_for_input = True
-while waiting_for_input:
-    clock.tick(120)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_f:
-                pygame.display.toggle_fullscreen()
-            if event.key == pygame.K_SPACE and not live_ball:
-                # Start the game when space is pressed and the ball is not live
+
+    # reset bools
+    is_game_over = False
+
+    try:
+
+        # load font and render text
+        title_font = pygame.font.Font("res/font/Game_Played.otf", 30)
+        title_on = title_font.render("PRESS ENTER", True, (102, 101, 206), bg).convert_alpha()
+        # create surfaces for title text on/off for blinking animation
+        blink_rect = title_on.get_rect()
+        title_off = pygame.Surface(blink_rect.size)
+        # cycle through both surfaces
+        blink_surfaces = cycle([title_on, title_off])
+        blink_surface = next(blink_surfaces)
+        pygame.time.set_timer(TITLE_BLINK_EVENT, fps * 10)
+
+        # get title text height and width
+        text_width = title_on.get_width()
+        text_height = title_on.get_height()
+
+        # load title image
+        title_img = pygame.image.load("res/img/title.png")
+        title_img_rect = title_img.get_rect()
+        # initial position
+        title_img_rect.x = scrw / 2 - title_img_rect.width / 2
+        title_img_rect.y = scrh / 3 - title_img_rect.height+100
+
+        # help text and images
+        arr_left_img = pygame.image.load("res/img/arrLeft.png")
+        arr_right_img = pygame.image.load("res/img/arrRight.png")
+        arr_left_img_rect = arr_left_img.get_rect()
+        arr_right_img_rect = arr_right_img.get_rect()
+
+        help_font = pygame.font.Font("res/font/Game_Played.otf", 18)
+
+        help_caption_move = help_font.render("MOVE: ", True, (102, 101, 175), bg).convert_alpha()
+        help_caption_exit = help_font.render("QUIT: ", True, (102, 101, 175), bg).convert_alpha()
+        help_caption_start = help_font.render("START: ", True, (102, 101, 175), bg).convert_alpha()
+        help_descr_exit = help_font.render("ESC", True, (102, 101, 225), bg).convert_alpha()
+        help_descr_start = help_font.render("SPACE", True, (102, 101, 225), bg).convert_alpha()
+
+        arr_left_img_rect.x = scrw / 2
+        arr_left_img_rect.y = scrh - 100
+
+        arr_right_img_rect.x = arr_left_img_rect.x + arr_left_img_rect.width
+        arr_right_img_rect.y = arr_left_img_rect.y
+
+        while is_game_intro:
+            # event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == TITLE_BLINK_EVENT:
+                    blink_surface = next(blink_surfaces)
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        quit()
+                    if event.key == pygame.K_f:
+                        pygame.display.toggle_fullscreen()
+            # key events
+            pressed = pygame.key.get_pressed()
+            if pressed[pygame.K_RETURN]:
+                is_game_intro = False
+                is_game = True
+
+            screen.fill(bg)
+
+            # display blinking title text
+            screen.blit(blink_surface, (scrw / 2 - text_width / 2, scrh / 2 - text_height / 2))
+
+            # display title image
+            pygame.draw.rect(screen, bg, title_img_rect)
+            screen.blit(title_img, title_img_rect)
+            # draw help
+            text_pos_x = arr_left_img_rect.x - help_caption_move.get_width() - 10
+            screen.blit(help_caption_move, (text_pos_x, arr_left_img_rect.y))
+            pygame.draw.rect(screen, bg, arr_left_img_rect)
+            screen.blit(arr_left_img, arr_left_img_rect)
+            pygame.draw.rect(screen, bg, arr_right_img_rect)
+            screen.blit(arr_right_img, arr_right_img_rect)
+            screen.blit(help_caption_start, (text_pos_x, arr_left_img_rect.y + help_caption_move.get_height() +3))
+            screen.blit(help_descr_start,
+                        (arr_right_img_rect.x - 10, arr_left_img_rect.y + help_caption_move.get_height()+3 ))
+            screen.blit(help_caption_exit, (text_pos_x, arr_left_img_rect.y + help_caption_move.get_height()+27))
+            screen.blit(help_descr_exit,
+                        (arr_right_img_rect.x - 10, arr_left_img_rect.y + help_caption_move.get_height()+27))
+
+            # update screen
+            pygame.display.update()
+            clock.tick(fps)
+
+    except FileNotFoundError:
+        print("Couldn't load font files.")
+        return
+    except Exception as gi_e:
+        print("Unknown Error occured! Error: " + str(gi_e))
+        return
+def gameloop():
+    pygame.init()
+    global score,high_score
+    clock=pygame.time.Clock()
+    global live_ball
+    global balls
+    global is_game_over
+    global is_game
+    waiting_for_input = True
+    while waiting_for_input:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_f:
+                    pygame.display.toggle_fullscreen()
+                if event.key == pygame.K_SPACE and not live_ball:
+                    # Start the game when space is pressed and the ball is not live
+                    live_ball = True
+                    balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
+                    player_paddle.reset()
+                    wall.create_wall(matrix)
+                    balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
+                    clock = pygame.time.Clock()
+                    score = 0
+                elif event.key == pygame.K_ESCAPE:
+                    score = 0
+                    with open('settings.txt', 'w') as setfile:
+                        json.dump(data, setfile)
+                    pygame.quit()
+                    sys.exit(0)
+            elif event.type == pygame.MOUSEBUTTONDOWN and not live_ball:
                 live_ball = True
                 balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
                 player_paddle.reset()
                 wall.create_wall(matrix)
                 balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
-                clock = pygame.time.Clock()
                 score = 0
-            elif event.key == pygame.K_ESCAPE:
-                score = 0
-                with open('settings.txt', 'w') as setfile:
-                    json.dump(data, setfile)
-                pygame.quit()
-                sys.exit(0)
-                clock = pygame.time.Clock()
-        elif event.type == pygame.MOUSEBUTTONDOWN and not live_ball:
-            live_ball = True
-            balls = [GameBall(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)]
-            player_paddle.reset()
-            wall.create_wall(matrix)
-            balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
-            clock = pygame.time.Clock()
-            score = 0
 
-    if live_ball:
-        player_paddle.move()  # Move the paddle first
+        if live_ball:
+            player_paddle.move()  # Move the paddle first
 
-        # Handle power-ups
-        for ball in balls:
-            ball.collect_power_ups()
+            # Handle power-ups
+            for ball in balls:
+                ball.collect_power_ups()
 
-        # Move and check collision for each ball
-        for ball in balls:
-            game_over = ball.move()
+            # Move and check collision for each ball
+            for ball in balls:
+                game_over = ball.move()
 
-            if ball.is_off_screen() or game_over != 0:
-                ball.live_ball = False
+                if ball.is_off_screen() or game_over != 0:
+                    ball.live_ball = False
 
-        # Check if all balls are not live
-        if not any(ball.live_ball for ball in balls):
-            live_ball = False
+            # Check if all balls are not live
+            if not any(ball.live_ball for ball in balls):
+                live_ball = False
 
-        screen.fill((0, 0, 0))
+            screen.fill((0, 0, 0))
 
-        # Draw all objects
-        wall.draw_wall(screen)
-        player_paddle.draw()
-        
-        # Draw power-ups
-        powerup.draw_power_ups()
+            # Draw all objects
+            wall.draw_wall(screen)
+            player_paddle.draw()
+            
+            # Draw power-ups
+            powerup.draw_power_ups()
 
-        for ball in balls:
-            ball.draw()
+            for ball in balls:
+                ball.draw()
 
-        # Print player instructions
-        if not live_ball:
-            # Start the timer when the game begins
-            start_time = pygame.time.get_ticks()
-            if game_over == 1:
-                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
-                exit_rect = exit_image.get_rect()
-                screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
-            elif game_over == -1:
-                exit_image = pygame.image.load('assets/exit.png').convert_alpha()
-                exit_rect = exit_image.get_rect()
-                screen.blit(exit_image, (scrw / 2 - logo_rect.width / 2, scrh // 2 - logo_rect.height / 2))
+            # Print player instructions
+            if not live_ball:
+                # Start the timer when the game begins
+                start_time = pygame.time.get_ticks()
+                if game_over == 1:
+                    is_game_over=True
+                elif game_over == -1:
+                    is_game_over=True
+                    
+            draw_score()
+            
+            pygame.display.update()
+            waiting_for_input=False
+        if score > high_score:
+                    high_score = score
+                    with open(high_score_file, 'w') as file:
+                        file.write(str(high_score))
+def main():
+    while is_running:
+        if is_game_intro:
+            # start screen
+            game_intro()
 
-        draw_score()
-    if score > high_score:
-            high_score = score
-            with open(high_score_file, 'w') as file:
-                file.write(str(high_score))
-    pygame.display.update()
+        if is_game:
+            # main game loop
+            gameloop()
 
-pygame.display.quit()
-pygame.quit()
+        if is_game_over:
+            game_over()
+
+    pygame.quit()
